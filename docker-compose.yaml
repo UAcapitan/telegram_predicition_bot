@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tg_prediction_bot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_root
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres_root@db:5432/tg_prediction_bot
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
