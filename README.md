@@ -7,6 +7,7 @@ Simple Telegram bot built with Aiogram. It sends random prediction images with c
 - Inline buttons for affiliate + contact link
 - Admin broadcast command
 - Admin commands to update links
+- Language selection with `/lng` (translations in `data/translations.json`)
 
 ## Setup
 1. Create a `.env` file from `.env.example` and set your bot token, admin IDs, and `DATABASE_URL`.
@@ -31,6 +32,7 @@ python main.py
 ## Commands
 - `/start` subscribe the user
 - `/predict` send random prediction image
+- `/lng` change language
 - `/broadcast your message` send to all subscribers (admin only)
 - `/setlink https://your-link` update affiliate link (admin only)
 - `/setcontact https://t.me/your_contact` update contact link (admin only)
