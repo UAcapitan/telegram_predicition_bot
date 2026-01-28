@@ -25,13 +25,13 @@ DEFAULT_CONFIG = {
 }
 
 LANGUAGES = {
+    "it": "Italiano",
+    "pl": "Polski",
+    "sr": "Srpski",
+    "fr": "Français",
+    "es": "Español",
+    "de": "Deutsch",
     "en": "English",
-    "pl": "Polish",
-    "sr": "Serbian",
-    "fr": "French",
-    "es": "Spanish",
-    "de": "German",
-    "it": "Italian",
 }
 
 LANGUAGE_FLAGS = {
@@ -277,11 +277,29 @@ def build_links_keyboard(config: dict, translations: dict, language: str) -> Inl
     affiliate = config.get("affiliate_link", "")
     contact = config.get("contact_link", "")
 
-    builder.button(text=t(translations, language, "button_next"), callback_data="next_prediction")
+    next_button = InlineKeyboardButton(
+        text=t(translations, language, "button_next"),
+        callback_data="next_prediction",
+    )
+    builder.row(next_button)
+
+    row_buttons = []
     if affiliate:
-        builder.button(text=t(translations, language, "button_start"), url=affiliate)
+        row_buttons.append(
+            InlineKeyboardButton(
+                text=t(translations, language, "button_start"),
+                url=affiliate,
+            )
+        )
     if contact:
-        builder.button(text=t(translations, language, "button_support"), url=contact)
+        row_buttons.append(
+            InlineKeyboardButton(
+                text=t(translations, language, "button_support"),
+                url=contact,
+            )
+        )
+    if row_buttons:
+        builder.row(*row_buttons)
 
     return builder.as_markup()
 
@@ -502,8 +520,14 @@ async def on_set_language(callback: CallbackQuery) -> None:
         return
     set_user_language(callback.from_user.id, code)
     translations = load_translations()
+    flag = LANGUAGE_FLAGS.get(code, "")
+    label = f"{flag} {LANGUAGES[code]}".strip()
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
     await callback.message.answer(
-        t(translations, code, "lng_updated").format(language=LANGUAGES[code])
+        t(translations, code, "lng_updated").format(language=label)
     )
     await callback.answer()
 
