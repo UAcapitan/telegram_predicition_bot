@@ -185,6 +185,14 @@ def get_user_language(user_id: int) -> str:
     return DEFAULT_LANGUAGE
 
 
+def user_exists(user_id: int) -> bool:
+    db_url = get_database_url()
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM subscribers WHERE user_id = %s", (user_id,))
+            return cur.fetchone() is not None
+
+
 def get_or_create_user_language(user_id: int) -> str:
     db_url = get_database_url()
     with psycopg.connect(db_url) as conn:
@@ -329,7 +337,14 @@ async def cmd_start(message: Message, config: AppConfig) -> None:
         return
 
     translations = load_translations()
-    language = get_or_create_user_language(message.from_user.id)
+    user_id = message.from_user.id
+    is_new = not user_exists(user_id)
+    language = get_or_create_user_language(user_id)
+    if is_new:
+        await message.answer(
+            t(translations, language, "lng_prompt"),
+            reply_markup=build_language_keyboard(),
+        )
     await message.answer(build_start_message(translations, language))
 
 
