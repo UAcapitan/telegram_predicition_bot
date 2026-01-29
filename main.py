@@ -303,6 +303,24 @@ def build_links_keyboard(config: dict, translations: dict, language: str) -> Inl
 
     return builder.as_markup()
 
+def build_main_keyboard(translations: dict, language: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    get_prediction = InlineKeyboardButton(
+        text=t(translations, language, "button_get_prediction"),
+        callback_data="get_prediction",
+    )
+    change_language = InlineKeyboardButton(
+        text=t(translations, language, "button_change_language"),
+        callback_data="change_language",
+    )
+    start_button = InlineKeyboardButton(
+        text=t(translations, language, "button_start_cmd"),
+        callback_data="show_start",
+    )
+    builder.row(get_prediction, change_language)
+    builder.row(start_button)
+    return builder.as_markup()
+
 def build_language_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for code, name in LANGUAGES.items():
@@ -363,14 +381,15 @@ async def cmd_start(message: Message, config: AppConfig) -> None:
             t(translations, language, "lng_prompt"),
             reply_markup=build_language_keyboard(),
         )
-    await message.answer(build_start_message(translations, language))
+    await message.answer(
+        build_start_message(translations, language),
+        reply_markup=build_main_keyboard(translations, language),
+    )
 
 
-async def cmd_predict(message: Message) -> None:
-    if not message.from_user:
-        return
+async def send_prediction(message: Message, user_id: int) -> None:
     translations = load_translations()
-    language = get_or_create_user_language(message.from_user.id)
+    language = get_or_create_user_language(user_id)
     try:
         image_path = get_random_image()
     except FileNotFoundError:
@@ -386,6 +405,11 @@ async def cmd_predict(message: Message) -> None:
         caption=caption,
         reply_markup=keyboard,
     )
+
+async def cmd_predict(message: Message) -> None:
+    if not message.from_user:
+        return
+    await send_prediction(message, message.from_user.id)
 
 
 async def on_next_prediction(callback: CallbackQuery) -> None:
@@ -412,6 +436,12 @@ async def on_next_prediction(callback: CallbackQuery) -> None:
         caption=caption,
         reply_markup=keyboard,
     )
+    await callback.answer()
+
+async def on_get_prediction(callback: CallbackQuery) -> None:
+    if not callback.message or not callback.from_user:
+        return
+    await send_prediction(callback.message, callback.from_user.id)
     await callback.answer()
 
 
@@ -509,6 +539,28 @@ async def cmd_language(message: Message) -> None:
         reply_markup=build_language_keyboard(),
     )
 
+async def on_change_language(callback: CallbackQuery) -> None:
+    if not callback.message or not callback.from_user:
+        return
+    translations = load_translations()
+    language = get_user_language(callback.from_user.id)
+    await callback.message.answer(
+        t(translations, language, "lng_prompt"),
+        reply_markup=build_language_keyboard(),
+    )
+    await callback.answer()
+
+async def on_show_start(callback: CallbackQuery) -> None:
+    if not callback.message or not callback.from_user:
+        return
+    translations = load_translations()
+    language = get_or_create_user_language(callback.from_user.id)
+    await callback.message.answer(
+        build_start_message(translations, language),
+        reply_markup=build_main_keyboard(translations, language),
+    )
+    await callback.answer()
+
 
 async def on_set_language(callback: CallbackQuery) -> None:
     if not callback.message or not callback.from_user:
@@ -567,6 +619,9 @@ async def main() -> None:
     )
     dp.message.register(cmd_language, Command("lng"))
     dp.callback_query.register(on_next_prediction, F.data == "next_prediction")
+    dp.callback_query.register(on_get_prediction, F.data == "get_prediction")
+    dp.callback_query.register(on_change_language, F.data == "change_language")
+    dp.callback_query.register(on_show_start, F.data == "show_start")
     dp.callback_query.register(on_set_language, F.data.startswith("set_lang:"))
 
     await dp.start_polling(bot)

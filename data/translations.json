@@ -1,6 +1,6 @@
 {
   "en": {
-    "start_user": "Welcome! Here is an advanced prediction system designed to improve your gameplay results. You will receive predictions on how to play and what to do to maximize your potential earnings. If anything is unclear, feel free to contact support. Enjoy.\n\nCommands:\n/predict - get a random prediction\n/start - show this help\n/lng - change language",
+    "start_user": "Welcome! Here is an advanced prediction system designed to improve your gameplay results. You will receive predictions on how to play and what to do to maximize your potential earnings. If anything is unclear, feel free to contact support. Enjoy.",
     "start_admin": "Admin commands:\n/broadcast your message - send to all subscribers\n/setlink https://your-link - update affiliate link\n/setcontact https://t.me/your_contact - update contact link",
     "admin_only": "Admin only.",
     "predict_no_images": "No prediction images yet. Add files to data/images.",
@@ -16,11 +16,14 @@
     "prediction_default": "Your prediction is ready!",
     "prediction_format": "Difficulty: {difficulty}\nMultiplier: up to {value}x\nCashout: {value}x or before",
     "button_next": "Next prediction",
+    "button_get_prediction": "Get prediction",
+    "button_change_language": "Change language",
+    "button_start_cmd": "Start",
     "button_start": "Start playing",
     "button_support": "Support"
   },
   "pl": {
-    "start_user": "Witaj! To zaawansowany system prognoz, który ma poprawić Twoje wyniki w grze. Otrzymasz prognozy, jak grać i co robić, aby zmaksymalizować potencjalne wygrane. Jeśli coś jest niejasne, skontaktuj się z pomocą. Miłej gry.\n\nKomendy:\n/predict - losowa prognoza\n/start - pokaż pomoc\n/lng - zmień język",
+    "start_user": "Witaj! To zaawansowany system prognoz, który ma poprawić Twoje wyniki w grze. Otrzymasz prognozy, jak grać i co robić, aby zmaksymalizować potencjalne wygrane. Jeśli coś jest niejasne, skontaktuj się z pomocą. Miłej gry.",
     "start_admin": "Komendy administratora:\n/broadcast twoja wiadomość - wyślij do wszystkich\n/setlink https://twoj-link - ustaw link partnerski\n/setcontact https://t.me/twoj_kontakt - ustaw kontakt",
     "admin_only": "Tylko dla administratora.",
     "predict_no_images": "Brak obrazów z prognozami. Dodaj pliki do data/images.",
@@ -36,11 +39,14 @@
     "prediction_default": "Twoja prognoza jest gotowa!",
     "prediction_format": "Poziom: {difficulty}\nMnożnik: do {value}x\nWypłata: {value}x lub wcześniej",
     "button_next": "Następna prognoza",
+    "button_get_prediction": "Pobierz prognozę",
+    "button_change_language": "Zmień język",
+    "button_start_cmd": "Start",
     "button_start": "Zacznij grać",
     "button_support": "Wsparcie"
   },
   "sr": {
-    "start_user": "Zdravo! Ovo je napredan sistem predikcija osmišljen da poboljša tvoje rezultate u igri. Dobićeš predikcije kako da igraš i šta da radiš kako bi maksimalno povećao potencijalnu zaradu. Ako nešto nije jasno, kontaktiraj podršku. Uživaj.\n\nKomande:\n/predict - nasumična predikcija\n/start - prikaži pomoć\n/lng - promeni jezik",
+    "start_user": "Zdravo! Ovo je napredan sistem predikcija osmišljen da poboljša tvoje rezultate u igri. Dobićeš predikcije kako da igraš i šta da radiš kako bi maksimalno povećao potencijalnu zaradu. Ako nešto nije jasno, kontaktiraj podršku. Uživaj.",
     "start_admin": "Admin komande:\n/broadcast tvoja poruka - pošalji svima\n/setlink https://tvoj-link - postavi affiliate link\n/setcontact https://t.me/tvoj_kontakt - postavi kontakt",
     "admin_only": "Samo za administratore.",
     "predict_no_images": "Nema slika predikcija. Dodaj fajlove u data/images.",
@@ -56,11 +62,14 @@
     "prediction_default": "Tvoja predikcija je spremna!",
     "prediction_format": "Težina: {difficulty}\nMultiplikator: do {value}x\nIsplata: {value}x ili ranije",
     "button_next": "Sledeća predikcija",
+    "button_get_prediction": "Dobij predikciju",
+    "button_change_language": "Promeni jezik",
+    "button_start_cmd": "Start",
     "button_start": "Počni igranje",
     "button_support": "Podrška"
   },
   "fr": {
-    "start_user": "Bienvenue ! Voici un système de prédictions avancé conçu pour améliorer vos résultats de jeu. Vous recevrez des prédictions sur la façon de jouer et quoi faire pour maximiser vos gains potentiels. Si quelque chose n’est pas clair, contactez le support. Profitez-en.\n\nCommandes :\n/predict - prédiction aléatoire\n/start - afficher l’aide\n/lng - changer la langue",
+    "start_user": "Bienvenue ! Voici un système de prédictions avancé conçu pour améliorer vos résultats de jeu. Vous recevrez des prédictions sur la façon de jouer et quoi faire pour maximiser vos gains potentiels. Si quelque chose n’est pas clair, contactez le support. Profitez-en.",
     "start_admin": "Commandes admin :\n/broadcast votre message - envoyer à tous\n/setlink https://votre-lien - définir le lien d’affiliation\n/setcontact https://t.me/votre_contact - définir le contact",
     "admin_only": "Réservé aux administrateurs.",
     "predict_no_images": "Aucune image de prédiction. Ajoutez des fichiers dans data/images.",
@@ -76,11 +85,14 @@
     "prediction_default": "Votre prédiction est prête !",
     "prediction_format": "Difficulté : {difficulty}\nMultiplicateur : jusqu’à {value}x\nEncaissement : {value}x ou avant",
     "button_next": "Prédiction suivante",
+    "button_get_prediction": "Obtenir une prédiction",
+    "button_change_language": "Changer la langue",
+    "button_start_cmd": "Start",
     "button_start": "Commencer",
     "button_support": "Support"
   },
   "es": {
-    "start_user": "¡Bienvenido! Este es un sistema avanzado de predicciones diseñado para mejorar tus resultados de juego. Recibirás predicciones sobre cómo jugar y qué hacer para maximizar tus ganancias potenciales. Si algo no está claro, contacta con soporte. Disfruta.\n\nComandos:\n/predict - predicción aleatoria\n/start - mostrar ayuda\n/lng - cambiar idioma",
+    "start_user": "¡Bienvenido! Este es un sistema avanzado de predicciones diseñado para mejorar tus resultados de juego. Recibirás predicciones sobre cómo jugar y qué hacer para maximizar tus ganancias potenciales. Si algo no está claro, contacta con soporte. Disfruta.",
     "start_admin": "Comandos de admin:\n/broadcast tu mensaje - enviar a todos\n/setlink https://tu-link - actualizar enlace afiliado\n/setcontact https://t.me/tu_contacto - actualizar contacto",
     "admin_only": "Solo para administradores.",
     "predict_no_images": "No hay imágenes de predicciones. Agrega archivos en data/images.",
@@ -96,11 +108,14 @@
     "prediction_default": "¡Tu predicción está lista!",
     "prediction_format": "Dificultad: {difficulty}\nMultiplicador: hasta {value}x\nCobro: {value}x o antes",
     "button_next": "Siguiente predicción",
+    "button_get_prediction": "Obtener predicción",
+    "button_change_language": "Cambiar idioma",
+    "button_start_cmd": "Start",
     "button_start": "Empezar a jugar",
     "button_support": "Soporte"
   },
   "de": {
-    "start_user": "Willkommen! Dies ist ein fortschrittliches Vorhersagesystem, das deine Spielergebnisse verbessern soll. Du erhältst Vorhersagen, wie du spielen und was du tun sollst, um deine potenziellen Gewinne zu maximieren. Wenn etwas unklar ist, kontaktiere den Support. Viel Spaß.\n\nBefehle:\n/predict - zufällige Vorhersage\n/start - Hilfe anzeigen\n/lng - Sprache ändern",
+    "start_user": "Willkommen! Dies ist ein fortschrittliches Vorhersagesystem, das deine Spielergebnisse verbessern soll. Du erhältst Vorhersagen, wie du spielen und was du tun sollst, um deine potenziellen Gewinne zu maximieren. Wenn etwas unklar ist, kontaktiere den Support. Viel Spaß.",
     "start_admin": "Admin-Befehle:\n/broadcast deine Nachricht - an alle senden\n/setlink https://dein-link - Affiliate-Link setzen\n/setcontact https://t.me/dein_kontakt - Kontakt setzen",
     "admin_only": "Nur für Admins.",
     "predict_no_images": "Keine Vorhersagebilder vorhanden. Füge Dateien zu data/images hinzu.",
@@ -116,11 +131,14 @@
     "prediction_default": "Deine Vorhersage ist bereit!",
     "prediction_format": "Schwierigkeit: {difficulty}\nMultiplikator: bis {value}x\nAuszahlung: {value}x oder früher",
     "button_next": "Nächste Vorhersage",
+    "button_get_prediction": "Vorhersage erhalten",
+    "button_change_language": "Sprache ändern",
+    "button_start_cmd": "Start",
     "button_start": "Jetzt spielen",
     "button_support": "Support"
   },
   "it": {
-    "start_user": "Benvenuto! Questo è un sistema avanzato di previsioni progettato per migliorare i tuoi risultati di gioco. Riceverai previsioni su come giocare e cosa fare per massimizzare i tuoi guadagni potenziali. Se qualcosa non è chiaro, contatta il supporto. Buon divertimento.\n\nComandi:\n/predict - previsione casuale\n/start - mostra aiuto\n/lng - cambia lingua",
+    "start_user": "Benvenuto! Questo è un sistema avanzato di previsioni progettato per migliorare i tuoi risultati di gioco. Riceverai previsioni su come giocare e cosa fare per massimizzare i tuoi guadagni potenziali. Se qualcosa non è chiaro, contatta il supporto. Buon divertimento.",
     "start_admin": "Comandi admin:\n/broadcast il tuo messaggio - invia a tutti\n/setlink https://tuo-link - aggiorna link affiliato\n/setcontact https://t.me/tuo_contatto - aggiorna contatto",
     "admin_only": "Solo per amministratori.",
     "predict_no_images": "Nessuna immagine di previsione. Aggiungi file in data/images.",
@@ -136,6 +154,9 @@
     "prediction_default": "La tua previsione è pronta!",
     "prediction_format": "Difficoltà: {difficulty}\nMoltiplicatore: fino a {value}x\nIncasso: {value}x o prima",
     "button_next": "Prossima previsione",
+    "button_get_prediction": "Ottieni previsione",
+    "button_change_language": "Cambia lingua",
+    "button_start_cmd": "Start",
     "button_start": "Inizia a giocare",
     "button_support": "Supporto"
   }
