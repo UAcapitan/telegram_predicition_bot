@@ -375,12 +375,13 @@ async def cmd_start(message: Message, config: AppConfig) -> None:
     translations = load_translations()
     user_id = message.from_user.id
     is_new = not user_exists(user_id)
-    language = get_or_create_user_language(user_id)
     if is_new:
         await message.answer(
-            t(translations, language, "lng_prompt"),
+            t(translations, DEFAULT_LANGUAGE, "lng_prompt"),
             reply_markup=build_language_keyboard(),
         )
+        return
+    language = get_or_create_user_language(user_id)
     await message.answer(
         build_start_message(translations, language),
         reply_markup=build_main_keyboard(translations, language),
@@ -580,6 +581,10 @@ async def on_set_language(callback: CallbackQuery) -> None:
         pass
     await callback.message.answer(
         t(translations, code, "lng_updated").format(language=label)
+    )
+    await callback.message.answer(
+        build_start_message(translations, code),
+        reply_markup=build_main_keyboard(translations, code),
     )
     await callback.answer()
 
