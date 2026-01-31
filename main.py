@@ -303,7 +303,11 @@ def build_links_keyboard(config: dict, translations: dict, language: str) -> Inl
 
     return builder.as_markup()
 
-def build_main_keyboard(translations: dict, language: str) -> InlineKeyboardMarkup:
+def build_main_keyboard(
+    translations: dict,
+    language: str,
+    config: dict,
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     get_prediction = InlineKeyboardButton(
         text=t(translations, language, "button_get_prediction"),
@@ -319,6 +323,14 @@ def build_main_keyboard(translations: dict, language: str) -> InlineKeyboardMark
     )
     builder.row(get_prediction, change_language)
     builder.row(start_button)
+    contact = config.get("contact_link", "")
+    if contact:
+        builder.row(
+            InlineKeyboardButton(
+                text=t(translations, language, "button_support"),
+                url=contact,
+            )
+        )
     return builder.as_markup()
 
 def build_language_keyboard() -> InlineKeyboardMarkup:
@@ -382,9 +394,10 @@ async def cmd_start(message: Message, config: AppConfig) -> None:
         )
         return
     language = get_or_create_user_language(user_id)
+    config = load_bot_config()
     await message.answer(
         build_start_message(translations, language),
-        reply_markup=build_main_keyboard(translations, language),
+        reply_markup=build_main_keyboard(translations, language, config),
     )
 
 
@@ -556,9 +569,10 @@ async def on_show_start(callback: CallbackQuery) -> None:
         return
     translations = load_translations()
     language = get_or_create_user_language(callback.from_user.id)
+    config = load_bot_config()
     await callback.message.answer(
         build_start_message(translations, language),
-        reply_markup=build_main_keyboard(translations, language),
+        reply_markup=build_main_keyboard(translations, language, config),
     )
     await callback.answer()
 
@@ -584,7 +598,7 @@ async def on_set_language(callback: CallbackQuery) -> None:
     )
     await callback.message.answer(
         build_start_message(translations, code),
-        reply_markup=build_main_keyboard(translations, code),
+        reply_markup=build_main_keyboard(translations, code, load_bot_config()),
     )
     await callback.answer()
 
