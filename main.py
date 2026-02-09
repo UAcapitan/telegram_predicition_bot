@@ -2,10 +2,12 @@ import asyncio
 import json
 import os
 import random
+from typing import Union
 from dataclasses import dataclass
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -22,6 +24,7 @@ TRANSLATIONS_FILE = DATA_DIR / "translations.json"
 DEFAULT_CONFIG = {
     "affiliate_link": "https://example.com",
     "contact_link": "https://t.me/mixeed22",
+    "notify_new_subscribers": "false",
 }
 
 LANGUAGES = {
@@ -116,7 +119,9 @@ def ensure_database() -> None:
                 f"""
                 CREATE TABLE IF NOT EXISTS subscribers (
                     user_id BIGINT PRIMARY KEY,
-                    lng TEXT NOT NULL DEFAULT '{DEFAULT_LANGUAGE}'
+                    lng TEXT NOT NULL DEFAULT '{DEFAULT_LANGUAGE}',
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    unsubscribed_at TIMESTAMPTZ
                 )
                 """,
             )
@@ -124,6 +129,18 @@ def ensure_database() -> None:
                 f"""
                 ALTER TABLE subscribers
                 ADD COLUMN IF NOT EXISTS lng TEXT NOT NULL DEFAULT '{DEFAULT_LANGUAGE}'
+                """,
+            )
+            cur.execute(
+                """
+                ALTER TABLE subscribers
+                ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE
+                """,
+            )
+            cur.execute(
+                """
+                ALTER TABLE subscribers
+                ADD COLUMN IF NOT EXISTS unsubscribed_at TIMESTAMPTZ
                 """,
             )
             cur.execute(
@@ -170,7 +187,7 @@ def load_subscribers() -> set[int]:
     db_url = get_database_url()
     with psycopg.connect(db_url) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT user_id FROM subscribers")
+            cur.execute("SELECT user_id FROM subscribers WHERE active = TRUE")
             return {row[0] for row in cur.fetchall()}
 
 
@@ -193,23 +210,87 @@ def user_exists(user_id: int) -> bool:
             return cur.fetchone() is not None
 
 
+def is_user_active(user_id: int) -> bool:
+    db_url = get_database_url()
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT active FROM subscribers WHERE user_id = %s", (user_id,))
+            row = cur.fetchone()
+            return bool(row[0]) if row else False
+
+
 def get_or_create_user_language(user_id: int) -> str:
     db_url = get_database_url()
     with psycopg.connect(db_url) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT lng FROM subscribers WHERE user_id = %s", (user_id,))
+            cur.execute("SELECT lng, active FROM subscribers WHERE user_id = %s", (user_id,))
             row = cur.fetchone()
             if row and row[0]:
+                if not row[1]:
+                    cur.execute(
+                        """
+                        UPDATE subscribers
+                        SET active = TRUE, unsubscribed_at = NULL
+                        WHERE user_id = %s
+                        """,
+                        (user_id,),
+                    )
                 return row[0]
             cur.execute(
                 """
-                INSERT INTO subscribers (user_id, lng)
-                VALUES (%s, %s)
-                ON CONFLICT (user_id) DO NOTHING
+                INSERT INTO subscribers (user_id, lng, active, unsubscribed_at)
+                VALUES (%s, %s, TRUE, NULL)
+                ON CONFLICT (user_id)
+                DO UPDATE SET active = TRUE, unsubscribed_at = NULL
                 """,
                 (user_id, DEFAULT_LANGUAGE),
             )
             return DEFAULT_LANGUAGE
+
+
+def set_user_status(user_id: int, active: bool) -> None:
+    db_url = get_database_url()
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            if active:
+                cur.execute(
+                    """
+                    UPDATE subscribers
+                    SET active = TRUE, unsubscribed_at = NULL
+                    WHERE user_id = %s
+                    """,
+                    (user_id,),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE subscribers
+                    SET active = FALSE, unsubscribed_at = NOW()
+                    WHERE user_id = %s
+                    """,
+                    (user_id,),
+                )
+
+
+def upsert_user_language(user_id: int, language: str) -> bool:
+    db_url = get_database_url()
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO subscribers (user_id, lng, active, unsubscribed_at)
+                VALUES (%s, %s, TRUE, NULL)
+                ON CONFLICT (user_id)
+                DO UPDATE SET
+                    lng = EXCLUDED.lng,
+                    active = TRUE,
+                    unsubscribed_at = NULL
+                RETURNING (xmax = 0) AS inserted
+                """,
+                (user_id, language),
+            )
+            row = cur.fetchone()
+            return bool(row[0]) if row else False
 
 
 def set_user_language(user_id: int, language: str) -> None:
@@ -218,10 +299,13 @@ def set_user_language(user_id: int, language: str) -> None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO subscribers (user_id, lng)
-                VALUES (%s, %s)
+                INSERT INTO subscribers (user_id, lng, active, unsubscribed_at)
+                VALUES (%s, %s, TRUE, NULL)
                 ON CONFLICT (user_id)
-                DO UPDATE SET lng = EXCLUDED.lng
+                DO UPDATE SET
+                    lng = EXCLUDED.lng,
+                    active = TRUE,
+                    unsubscribed_at = NULL
                 """,
                 (user_id, language),
             )
@@ -376,8 +460,113 @@ def is_admin(message: Message, config: AppConfig) -> bool:
     return message.from_user and message.from_user.id in config.admin_ids
 
 
+def is_admin_user(user_id: int, config: AppConfig) -> bool:
+    return user_id in config.admin_ids
+
+
 def build_start_message(translations: dict, language: str) -> str:
     return t(translations, language, "start_user")
+
+
+def build_admin_keyboard(translations: dict, language: str, notify_enabled: bool) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=t(translations, language, "admin_refresh"),
+            callback_data="admin:refresh",
+        )
+    )
+    notify_label = (
+        t(translations, language, "admin_notify_on")
+        if notify_enabled
+        else t(translations, language, "admin_notify_off")
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=notify_label,
+            callback_data="admin:toggle_notify",
+        )
+    )
+    return builder.as_markup()
+
+
+def get_bool_config(config: dict, key: str, default: bool = False) -> bool:
+    raw = str(config.get(key, str(default))).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def format_language_label(code: str) -> str:
+    name = LANGUAGES.get(code, code)
+    flag = LANGUAGE_FLAGS.get(code, "")
+    label = f"{flag} {name}".strip()
+    return label
+
+
+def get_subscriber_stats() -> tuple[int, int, dict[str, int]]:
+    db_url = get_database_url()
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM subscribers WHERE active = TRUE")
+            active_count = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM subscribers WHERE active = FALSE")
+            inactive_count = cur.fetchone()[0]
+            cur.execute(
+                """
+                SELECT lng, COUNT(*)
+                FROM subscribers
+                WHERE active = TRUE
+                GROUP BY lng
+                ORDER BY COUNT(*) DESC
+                """
+            )
+            language_rows = cur.fetchall()
+    per_language: dict[str, int] = {}
+    for code, count in language_rows:
+        if not code:
+            code = DEFAULT_LANGUAGE
+        per_language[str(code)] = int(count)
+    return int(active_count), int(inactive_count), per_language
+
+
+def build_admin_stats_text(translations: dict, language: str) -> str:
+    active_count, inactive_count, per_language = get_subscriber_stats()
+    lines = [
+        t(translations, language, "admin_stats_header").format(
+            active=active_count,
+            unsubscribed=inactive_count,
+        ),
+        t(translations, language, "admin_stats_languages_header"),
+    ]
+    if not per_language:
+        lines.append(t(translations, language, "admin_stats_languages_none"))
+    else:
+        for code, count in per_language.items():
+            label = format_language_label(code)
+            lines.append(f"- {label}: {count}")
+    return "\n".join(lines)
+
+
+def format_new_subscriber_message(
+    translations: dict,
+    language: str,
+    user: Union[Message, CallbackQuery],
+    chosen_language: str,
+) -> str:
+    from_user = user.from_user
+    username = getattr(from_user, "username", None) if from_user else None
+    first_name = getattr(from_user, "first_name", "") if from_user else ""
+    last_name = getattr(from_user, "last_name", "") if from_user else ""
+    if username:
+        display = f"@{username}"
+    else:
+        display = " ".join(part for part in [first_name, last_name] if part).strip()
+    display = display or t(translations, language, "admin_new_subscriber_unknown")
+    label = format_language_label(chosen_language)
+    return t(translations, language, "admin_new_subscriber").format(
+        user=display,
+        user_id=from_user.id if from_user else "unknown",
+        language=label,
+    )
 
 
 async def cmd_start(message: Message, config: AppConfig) -> None:
@@ -386,13 +575,14 @@ async def cmd_start(message: Message, config: AppConfig) -> None:
 
     translations = load_translations()
     user_id = message.from_user.id
-    is_new = not user_exists(user_id)
-    if is_new:
+    if not user_exists(user_id):
         await message.answer(
             t(translations, DEFAULT_LANGUAGE, "lng_prompt"),
             reply_markup=build_language_keyboard(),
         )
         return
+    if not is_user_active(user_id):
+        set_user_status(user_id, True)
     language = get_or_create_user_language(user_id)
     config = load_bot_config()
     await message.answer(
@@ -484,6 +674,9 @@ async def cmd_broadcast(message: Message, command: CommandObject, config: AppCon
         try:
             await message.bot.send_message(user_id, text)
             sent += 1
+        except TelegramForbiddenError:
+            set_user_status(user_id, False)
+            failed += 1
         except Exception:
             failed += 1
 
@@ -577,7 +770,7 @@ async def on_show_start(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-async def on_set_language(callback: CallbackQuery) -> None:
+async def on_set_language(callback: CallbackQuery, config: AppConfig) -> None:
     if not callback.message or not callback.from_user:
         return
     data = callback.data or ""
@@ -585,7 +778,7 @@ async def on_set_language(callback: CallbackQuery) -> None:
     if code not in LANGUAGES:
         await callback.answer()
         return
-    set_user_language(callback.from_user.id, code)
+    is_new = upsert_user_language(callback.from_user.id, code)
     translations = load_translations()
     flag = LANGUAGE_FLAGS.get(code, "")
     label = f"{flag} {LANGUAGES[code]}".strip()
@@ -600,7 +793,69 @@ async def on_set_language(callback: CallbackQuery) -> None:
         build_start_message(translations, code),
         reply_markup=build_main_keyboard(translations, code, load_bot_config()),
     )
+    if is_new:
+        bot_config = load_bot_config()
+        if get_bool_config(bot_config, "notify_new_subscribers", False):
+            admin_language = DEFAULT_LANGUAGE
+            text = format_new_subscriber_message(translations, admin_language, callback, code)
+            for admin_id in config.admin_ids:
+                try:
+                    await callback.bot.send_message(admin_id, text)
+                except Exception:
+                    continue
     await callback.answer()
+
+
+async def cmd_stop(message: Message) -> None:
+    if not message.from_user:
+        return
+    translations = load_translations()
+    language = get_or_create_user_language(message.from_user.id)
+    set_user_status(message.from_user.id, False)
+    await message.answer(t(translations, language, "unsubscribed"))
+
+
+async def cmd_admin(message: Message, config: AppConfig) -> None:
+    translations = load_translations()
+    language = DEFAULT_LANGUAGE
+    if message.from_user:
+        language = get_user_language(message.from_user.id)
+    if not is_admin(message, config):
+        await message.answer(t(translations, language, "admin_only"))
+        return
+    bot_config = load_bot_config()
+    notify_enabled = get_bool_config(bot_config, "notify_new_subscribers", False)
+    stats_text = build_admin_stats_text(translations, language)
+    await message.answer(
+        stats_text,
+        reply_markup=build_admin_keyboard(translations, language, notify_enabled),
+    )
+
+
+async def on_admin_action(callback: CallbackQuery, config: AppConfig) -> None:
+    if not callback.message or not callback.from_user:
+        return
+    translations = load_translations()
+    language = get_user_language(callback.from_user.id)
+    if not is_admin_user(callback.from_user.id, config):
+        await callback.answer(t(translations, language, "admin_only"), show_alert=True)
+        return
+    action = (callback.data or "").split(":", 1)[-1]
+    bot_config = load_bot_config()
+    if action == "toggle_notify":
+        current = get_bool_config(bot_config, "notify_new_subscribers", False)
+        bot_config["notify_new_subscribers"] = "true" if not current else "false"
+        save_bot_config(bot_config)
+        notice_key = "admin_notify_enabled" if not current else "admin_notify_disabled"
+        await callback.answer(t(translations, language, notice_key))
+    else:
+        await callback.answer()
+    notify_enabled = get_bool_config(load_bot_config(), "notify_new_subscribers", False)
+    stats_text = build_admin_stats_text(translations, language)
+    await callback.message.edit_text(
+        stats_text,
+        reply_markup=build_admin_keyboard(translations, language, notify_enabled),
+    )
 
 
 async def main() -> None:
@@ -622,6 +877,12 @@ async def main() -> None:
     async def cmd_setcontact_entry(message: Message, command: CommandObject) -> None:
         await cmd_setcontact(message, command, app_config)
 
+    async def cmd_admin_entry(message: Message) -> None:
+        await cmd_admin(message, app_config)
+
+    async def on_admin_action_entry(callback: CallbackQuery) -> None:
+        await on_admin_action(callback, app_config)
+
     dp.message.register(cmd_start_entry, Command("start"))
     dp.message.register(cmd_predict, Command("predict"))
     dp.message.register(
@@ -636,12 +897,21 @@ async def main() -> None:
         cmd_setcontact_entry,
         Command("setcontact"),
     )
+    dp.message.register(cmd_admin_entry, Command("admin"))
+    dp.message.register(cmd_stop, Command("stop"))
     dp.message.register(cmd_language, Command("lng"))
     dp.callback_query.register(on_next_prediction, F.data == "next_prediction")
     dp.callback_query.register(on_get_prediction, F.data == "get_prediction")
     dp.callback_query.register(on_change_language, F.data == "change_language")
     dp.callback_query.register(on_show_start, F.data == "show_start")
-    dp.callback_query.register(on_set_language, F.data.startswith("set_lang:"))
+    async def on_set_language_entry(callback: CallbackQuery) -> None:
+        await on_set_language(callback, app_config)
+
+    dp.callback_query.register(on_set_language_entry, F.data.startswith("set_lang:"))
+    dp.callback_query.register(
+        on_admin_action_entry,
+        F.data.startswith("admin:"),
+    )
 
     await dp.start_polling(bot)
 
